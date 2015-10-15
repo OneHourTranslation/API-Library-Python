@@ -1,8 +1,10 @@
 OneHourTranslation API Library for Python
 =========================================
 
-.. image:: https://secure.travis-ci.org/ShyrikSV/OHT-API-2_Client-Python.png
-   :target: http://travis-ci.org/ShyrikSV/OHT-API-2_Client-Python
+.. image:: https://secure.travis-ci.org/OneHourTranslation/API-Library-Python
+.png
+   :target: http://travis-ci.org/ShyrikSV/OneHourTranslation/API-Library-Python
+
 
 One Hour Translation™ provides translation, proofreading and transcription services worldwide. The following API library allows customers to submit and monitor jobs automatically and remotely. 
 
