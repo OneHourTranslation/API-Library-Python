@@ -1,8 +1,7 @@
 OneHourTranslation API Library for Python
 =========================================
 
-.. image:: https://secure.travis-ci.org/OneHourTranslation/API-Library-Python
-.png
+.. image:: https://secure.travis-ci.org/OneHourTranslation/API-Library-Python.png
    :target: http://travis-ci.org/ShyrikSV/OneHourTranslation/API-Library-Python
 
 
