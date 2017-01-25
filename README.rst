@@ -33,7 +33,7 @@ Some words about testing:
 Starters' Guide
 ---------------
 
-First of all, you must to obtain private and public keys:
+First of all, you must obtain private and public keys:
 
 1. Register as a customer on `One Hour Translation <https://www.onehourtranslation.com/auth/register>`_
 2. Request your `API Keys <https://www.onehourtranslation.com/profile/apiKeys>`_
@@ -62,7 +62,7 @@ The API Library must be configured before calling any API method:
 .. code-block:: python
 
 	>>> from OhtApi2 import OhtApi
-	>>> oht = OhtApi(YOUR_PUBLIK_KEY, YOUR_PRIVATE_KEY, True) # True for use sandbox
+	>>> oht = OhtApi(YOUR_PUBLIC_KEY, YOUR_PRIVATE_KEY, True) # True for use sandbox
 	>>> print(oht.account_details())
 	oht_response(status=oht_response(code=0, msg='ok'), errors=[], results=oht_response(account_username='YOU_ACCOUNT_NAME', credits='98610.5200', role='customer', account_id='YOUR_ID'))
 	...
