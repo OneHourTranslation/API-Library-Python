@@ -9,6 +9,7 @@ class OhtApi:
 
     _apiUrl  = {"account-details": "/account/",
                 "create-file-resource": "/resources/file",
+                "create-text-resource": "/resources/text",
                 "get-resource": "/resources/{0}",
                 "download-resource": "/resources/{0}/download",
                 "quote": "/tools/quote",
@@ -17,6 +18,7 @@ class OhtApi:
                 "new-proofreading-project-single": "/projects/proof-general",
                 "new-proofreading-project-advanced": "/projects/proof-translated",
                 "new-transcription-project": "/projects/transcription",
+                "new-translation-plus-editing-project": "/projects/transproof",
                 "project-details": "/projects/{0}",
                 "cancel-project": "/projects/{0}",
                 "project-comments": "/projects/{0}/comments",
@@ -27,7 +29,9 @@ class OhtApi:
                 "machine-detect-lang": "/mt/detect/text",
                 "discover-langs": "/discover/languages",
                 "discover-langs_pairs": "/discover/language_pairs",
-                "supported-expertises": "/discover/expertise"
+                "supported-expertises": "/discover/expertise",
+                "tag-operation": "/project/{0}/tag",
+                "delete-tag":"/project/{0}/tag/{1}"
                 }
 
     def __init__(self, public_key, private_key, sandbox=False, time_out=10):
@@ -175,6 +179,26 @@ class OhtApi:
         else:
             return self.json_to_ntuple(requests.post(api, params=params).text)
 
+    def create_text_resource(self, text):
+        """
+        Create new text resource.
+        After the resource entity is created, it can be used in job requests.
+        :param text: {String} -> provide text for translation
+        :return: namedtuple with fields:
+            status -> status with fields:
+                code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
+                msg: {String} -> request status message, "ok" for OK
+            results: {List} -> list of uuid uploaded file
+            errors: {List} -> list of errors
+
+        """
+        api = self.__workUrl + self._apiUrl["create-text-resource"]
+        params = {"public_key": self.__publicKey,
+                  "secret_key": self.__privateKey,
+                  "text": text}
+
+        return self.json_to_ntuple(requests.post(api, params=params).text)
+
     def get_resource(self, resource_uuid, project_id=-1, fetch=""):
         """
         Provides information regarding a specific resource
@@ -299,7 +323,7 @@ class OhtApi:
                   "resources": ",".join(resources)}
         return self.json_to_ntuple(requests.get(api, params=params).text)
 
-    def create_translation_project(self, source_lang, target_lang, sources, word_count=0, notes="", expertise="", callback_url="", custom=None, name=""):
+    def create_translation_project(self, source_lang, target_lang, sources, word_count=0, notes="", expertise="", callback_url="", custom=None, name="", reference_resources=None):
         """
         Open a new translation project with One Hour Translation
         :param source_lang: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
@@ -309,8 +333,9 @@ class OhtApi:
         :param notes: {String} -> (optional) Text note that will be shown to translator regarding the newly project
         :param expertise: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/expertise-codes
         :param callback_url: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/callbacks
-        :param custom: {List} -> (optional, 0..9 items) ???
+        :param custom: {List} -> (optional, 0..9 items)
         :param name: {String} -> (optional) Name your project. If empty, your project will be named automatically.
+        :param reference_resources: {List} -> list of reference resource UUIDs
         :return: namedtuple with fields:
             status -> status with fields:
                 code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
@@ -328,10 +353,17 @@ class OhtApi:
                   "source_language": source_lang,
                   "target_language": target_lang,
                   "sources": ",".join(sources)}
-        self._param_injection_helper(params, custom=custom, wordCount=word_count, notes=notes, expertise=expertise, callbackUrl=callback_url, name=name)
+
+        if expertise:
+            params["expertise"] = expertise
+
+        if reference_resources:
+            params['reference_resources'] = ",".join(reference_resources)
+
+        self._param_injection_helper(params, custom=custom, wordcount=word_count, notes=notes, callback_url=callback_url, name=name)
         return self.json_to_ntuple(requests.post(api, params=params).text)
 
-    def create_proof_reading_project(self, source_lang, sources, word_count=0, notes="", expertise="", callback_url="", custom=None, name=""):
+    def create_proof_reading_project(self, source_lang, sources, word_count=0, notes="", expertise="", callback_url="", custom=None, name="", reference_resources=None):
         """
         Create new proofreading project, same language
         :param source_lang: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
@@ -340,8 +372,9 @@ class OhtApi:
         :param notes: {String} -> (optional) Text note that will be shown to translator regarding the newly project
         :param expertise: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/expertise-codes
         :param callback_url: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/callbacks
-        :param custom: {List} -> (optional, 0..9 items) ???
+        :param custom: {List} -> (optional, 0..9 items)
         :param name: {String} -> (optional) Name your project. If empty, your project name will be blank
+        :param reference_resources: {List} -> list of reference resource UUIDs
         :return: namedtuple with fields:
             status -> status with fields:
                 code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
@@ -358,10 +391,17 @@ class OhtApi:
                   "secret_key": self.__privateKey,
                   "source_language": source_lang,
                   "sources": ",".join(sources)}
-        self._param_injection_helper(params, custom=custom, wordCount=word_count, notes=notes, expertise=expertise, callbackUrl=callback_url, name=name)
+
+        if expertise:
+            params["expertise"] = expertise
+
+        if reference_resources:
+            params['reference_resources'] = ",".join(reference_resources)
+
+        self._param_injection_helper(params, custom=custom, wordcount=word_count, notes=notes, callback_url=callback_url, name=name)
         return self.json_to_ntuple(requests.post(api, params=params).text)
 
-    def create_proof_translated_project(self, source_lang, target_lang, sources, translations, word_count=0, notes="", expertise="", callback_url="", custom=None, name=""):
+    def create_proof_translated_project(self, source_lang, target_lang, sources, translations, word_count=0, notes="", expertise="", callback_url="", custom=None, name="", reference_resources=None):
         """
         Create new proofreading project, Providing source and translation
         :param source_lang: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
@@ -372,8 +412,9 @@ class OhtApi:
         :param notes: {String} -> (optional) Text note that will be shown to translator regarding the newly project
         :param expertise: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/expertise-codes
         :param callback_url: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/callbacks
-        :param custom: {List} -> (optional, 0..9 items) ???
+        :param custom: {List} -> (optional, 0..9 items)
         :param name: {String} -> (optional) Name your project. If empty, your project name will be blank
+        :param reference_resources: {List} -> list of reference resource UUIDs
         :return: namedtuple with fields:
             status -> status with fields:
                 code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
@@ -392,11 +433,17 @@ class OhtApi:
                   "target_language": target_lang,
                   "sources": ",".join(sources),
                   "translations": ",".join(translations)}
-        self._param_injection_helper(params, custom=custom, wordCount=word_count, notes=notes, expertise=expertise, callbackUrl=callback_url, name=name)
-        print(requests.post(api, params=params).url)
+
+        if expertise:
+            params["expertise"] = expertise
+
+        if reference_resources:
+            params['reference_resources'] = ",".join(reference_resources)
+
+        self._param_injection_helper(params, custom=custom, wordcount=word_count, notes=notes, callback_url=callback_url, name=name)
         return self.json_to_ntuple(requests.post(api, params=params).text)
 
-    def create_transcription_project(self, source_lang, sources, length=0, notes="", callback_url="", custom=None, name=""):
+    def create_transcription_project(self, source_lang, sources, length=0, notes="", callback_url="", custom=None, name="", reference_resources=None):
         """
         Create a transcription project at One Hour Translation
         :param source_lang: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
@@ -406,6 +453,7 @@ class OhtApi:
         :param callback_url: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/callbacks
         :param custom: {List} -> (optional, 0..9 items) ???
         :param name: {String} -> (optional) Name your project. If empty, your project name will be blank
+        :param reference_resources: {List} -> list of reference resource UUIDs
         :return: namedtuple with fields:
             status -> status with fields:
                 code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
@@ -422,7 +470,51 @@ class OhtApi:
                   "secret_key": self.__privateKey,
                   "source_language": source_lang,
                   "sources": ",".join(sources)}
-        self._param_injection_helper(params, custom=custom, length=length, notes=notes, callbackUrl=callback_url, name=name)
+
+        if reference_resources:
+            params['reference_resources'] = ",".join(reference_resources)
+
+        self._param_injection_helper(params, custom=custom, length=length, notes=notes, callback_url=callback_url, name=name)
+        return self.json_to_ntuple(requests.post(api, params=params).text)
+
+    def create_translation_plus_editing(self, source_lang, target_lang, sources, word_count=0, notes="", expertise="", callback_url="", custom=None, name="", reference_resources=None):
+        """
+        Open a new translation + editing project with One Hour Translation
+        :param source_lang: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
+        :param target_lang: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
+        :param sources: {List} -> list of Resource UUIDs
+        :param word_count: {Integer} -> (optional) If empty use automatic counting
+        :param notes: {String} -> (optional) Text note that will be shown to translator regarding the newly project
+        :param expertise: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/expertise-codes
+        :param callback_url: {String} -> (optional) see https://www.onehourtranslation.com/translation/api-documentation-v2/callbacks
+        :param custom: {List} -> (optional, 0..9 items)
+        :param name: {String} -> (optional) Name your project. If empty, your project will be named automatically.
+        :param reference_resources: {List} -> list of reference resource UUIDs
+        :return: namedtuple with fields:
+            status -> status with fields:
+                code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
+                msg: {String} -> request status message, "ok" for OK
+            results -> namedtuple with fields:
+                project_id: {Integer} -> unique id of the newly project created
+                wordcount: {Integer} -> total word count of the newly project
+                credits: {Integer} -> total credit worth of the newly project
+            errors: {List} -> list of errors
+
+        """
+        api = self.__workUrl + self._apiUrl["new-translation-plus-editing-project"]
+        params = {"public_key": self.__publicKey,
+                  "secret_key": self.__privateKey,
+                  "source_language": source_lang,
+                  "target_language": target_lang,
+                  "sources": ",".join(sources)}
+
+        if expertise:
+            params["expertise"] = expertise
+
+        if reference_resources:
+            params['reference_resources'] = ",".join(reference_resources)
+
+        self._param_injection_helper(params, custom=custom, wordcount=word_count, notes=notes, callback_url=callback_url, name=name)
         return self.json_to_ntuple(requests.post(api, params=params).text)
 
     def project_detail(self, project_id):
@@ -436,13 +528,13 @@ class OhtApi:
             results: namedtuple with fields:
                 project_id: {String} -> the unique id of the requested project
                 project_type: {String} -> Translation | Expert Translation | Proofreading | Transcription | Translation + Proofreading
-                project_status: {String} -> Pending | in_progress | submitted | signed | completed | canceled
-                                            pending - project submitted to OHT, but professional worker (translator/proofreader) did not start working yet
-                                            in_progress - worker started working on this project
-                                            submitted - the worker uploaded the first target resource to the project. This does not mean that the project is completed.
-                                            signed - the worker declared (with his signature) that he finished working on this project and all resources have been uploaded.
-                                            completed - final state of the project, after which we cannot guarantee fixes or corrections. This state is automatically enforced after 4 days of inactivity on the project.
-                project_status_code: {String} ->
+                project_status: {String} -> Waiting for a translator | Being translated | Finished | Waiting for proofreader | completed | disputed | cancelled
+                project_status_code: {String} -> Pending | in_progress | submitted | signed | completed | canceled
+                                                 pending - project submitted to OHT, but professional worker (translator/proofreader) did not start working yet
+                                                 in_progress - worker started working on this project
+                                                 submitted - the worker uploaded the first target resource to the project. This does not mean that the project is completed.
+                                                 signed - the worker declared (with his signature) that he finished working on this project and all resources have been uploaded.
+                                                 completed - final state of the project, after which we cannot guarantee fixes or corrections. This state is automatically enforced after 4 days of inactivity on the project.
                 source_language: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
                 target_language: {String} -> language codes, see https://www.onehourtranslation.com/translation/api-documentation-v2/language-codes
                 resources: namedtuple with fields
@@ -450,6 +542,8 @@ class OhtApi:
                     proofs: {String}
                     transcriptions: {List} -> resources uuid
                     sources: {List} -> resources uuid
+                    results: {List} -> Translated files uuids, this field will return the final translated files, not depending on project type.
+                    reference: {List} -> reference files uuids
                 wordcount | length : {Integer} -> length - in seconds (transcription projects only);
                 custom: {String} ->
                 resource_binding: {Dict} -> key {String}: resource uuid, value {List}: resources uuid
@@ -549,13 +643,38 @@ class OhtApi:
                   "project_id": project_id}
         return self.json_to_ntuple(requests.get(api, params=params).text)
 
-    def post_project_ratings(self, project_id, comment_type, rate, remarks=""):
+    def post_project_ratings(self, project_id, rating_type, rate, remarks="", publish=0, categories={}):
         """
         Post a rating for the quality of the translation and service
         :param project_id: {Integer} -> project id
-        :param comment_type: {String} -> Customer|Service
+        :param rating_type: {String} -> Customer|Service
         :param rate: {Integer} -> Rating of project (1 - being the lowest; 10 - being the highest)
         :param remarks: {String} -> (optional) Remark left with the rating
+        :param publish: {Integer} -> (optional) Allow OneHourTranslation to publish your review on Yotpo. 1 - publish, 0 - don't publish
+        :param categories: {Dictionary} -> (optional) Extra Service / translation rating values provided via checkboxes.
+                                            Service rating must provide fields (all are boolean 0 | 1 values):
+                                            service_was_on_time - Service on time, or took too long
+                                            service_support_helpful - The support was helpful
+                                            service_good_quality - The service was with good quality?
+                                            service_trans_responded - Slowly / Quickly
+                                            service_would_recommend - The site would be recommended
+
+                                            Translation rating must provide fields (all are boolean 0 | 1 values):
+                                            trans_is_good - Good translation quality
+                                            trans_bad_formatting - Bad formatting
+                                            trans_misunderstood_source - source misunderstood/misrepresent
+                                            trans_spell_tps_grmr_mistakes - Spelling/Typos/Grammer mistakes
+                                            trans_text_miss - Missing text / Partly untranslated
+                                            trans_not_followed_instrctns - Translator didn't follow instructions
+                                            trans_inconsistent - Translation is inconsistent
+                                            trans_bad_written - Translation written badly, or too literal
+
+                                            Example of passing categories parameters:
+                                            rating_type - customer:
+                                            {"trans_bad_formatting":1, "trans_bad_written":1, "trans_is_good":1}
+                                            rating_type - service:
+                                            {"service_trans_responded":0, "service_trans_responded":1, "service_was_on_time":0}
+
         :return: namedtuple with fields:
             status -> status with fields:
                 code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
@@ -568,8 +687,12 @@ class OhtApi:
         params = {"public_key": self.__publicKey,
                   "secret_key": self.__privateKey,
                   "project_id": project_id,
-                  "type": comment_type,
-                  "rate": rate}
+                  "type": rating_type,
+                  "rate": rate,
+                  "publish": publish}
+
+        for entry in categories:
+            params["categories[" + entry + "]"] = categories[entry]
 
         if(remarks):
             params["remarks"] = remarks
@@ -679,3 +802,60 @@ class OhtApi:
                   "source_language": source_lang,
                   "target_language": target_lang}
         return self.json_to_ntuple(requests.get(api, params=params).text)
+
+    def add_tag(self, project_id, tag):
+        """
+        Add a tag to your project
+        :param project_id: {Integer} -> project id
+        :param tag: {String} -> tag text
+        :return: namedtuple with fields:
+            status -> status with fields:
+                code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
+                msg: {String} -> request status message, "ok" for OK
+            results: {List} -> empty
+            errors: {List} -> list of errors
+
+        """
+        api = self.__workUrl + self._apiUrl["tag-operation"].format(project_id)
+        params = {"public_key": self.__publicKey,
+                  "secret_key": self.__privateKey,
+                  "tag_name": tag}
+
+        return self.json_to_ntuple(requests.post(api, params=params).text)
+
+    def get_tags(self, project_id):
+        """
+        Get all project tags
+        :param project_id: {Integer} -> project id
+        :return: namedtuple with fields:
+            status -> status with fields:
+                code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
+                msg: {String} -> request status message, "ok" for OK
+            results: {List} -> empty
+            errors: {List} -> list of errors
+
+        """
+        api = self.__workUrl + self._apiUrl["tag-operation"].format(project_id)
+        params = {"public_key": self.__publicKey,
+                  "secret_key": self.__privateKey}
+
+        return self.json_to_ntuple(requests.get(api, params=params).text)
+
+    def delete_tag(self, project_id, tag_id):
+        """
+        Delete specific tag
+        :param project_id: {Integer} -> project id
+        :param tag_id: {Integer} -> tag id
+        :return: namedtuple with fields:
+            status -> status with fields:
+                code: {Integer} -> request status code, 0 for OK.  More info: https://www.onehourtranslation.com/translation/api-documentation-v2/general-instructions#status-and-error-codes
+                msg: {String} -> request status message, "ok" for OK
+            results: {List} -> empty
+            errors: {List} -> list of errors
+
+        """
+        api = self.__workUrl + self._apiUrl["delete-tag"].format(project_id, tag_id)
+        params = {"public_key": self.__publicKey,
+                   "secret_key": self.__privateKey}
+
+        return self.json_to_ntuple(requests.delete(api, params=params).text)
