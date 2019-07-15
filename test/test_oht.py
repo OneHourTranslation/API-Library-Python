@@ -15,7 +15,7 @@ holder = StateHolder()
 
 class Test_URLCheckSandbox(unittest.TestCase):
     def setUp(self):
-        self.obj = OhtApi2.OhtApi("a","b", True)
+        self.obj = OhtApi2.OhtApi(os.environ['PubKey'], os.environ['PrivKey'], sandbox=True)
         self.method = self.obj.set_sandbox_url
 
     def tearDown(self):
@@ -30,7 +30,7 @@ class Test_URLCheckSandbox(unittest.TestCase):
             self.method("https://some.undefined.com")
 
     def test_valid_URL(self):
-        self.assertTrue(self.method("http://sandbox.onehourtranslation.com/api/2"))
+        self.assertTrue(self.method("https://sandbox.onehourtranslation.com/api/2"))
 
     def test_valid_URL_no_schema(self):
         self.assertTrue(self.method("sandbox.onehourtranslation.com/api/2"))
@@ -38,13 +38,13 @@ class Test_URLCheckSandbox(unittest.TestCase):
 
 class Test_URLCheckProduct(Test_URLCheckSandbox):
     def setUp(self):
-        self.obj = OhtApi2.OhtApi("a","b", False)
+        self.obj = OhtApi2.OhtApi(public_key= "a",private_key= "b", sandbox=False)
         self.method = self.obj.set_base_url
 
 
 class Test_JsonToObject(unittest.TestCase):
     def setUp(self):
-        self.obj = OhtApi2.OhtApi("a","b", True)
+        self.obj = OhtApi2.OhtApi(public_key= "a",private_key= "b", sandbox=False)
 
     def tearDown(self):
         del self.obj
@@ -113,11 +113,9 @@ class Test_OHTRequestsSimple(Test_Answers):
 
     def test_machine_translate(self):
         text_en = "The sun is shining brightly"
-        text_fr = "Le soleil brille de mille feux"
-
         answer = self.obj.machine_translate("en-us", "fr-fr", text_en)
         self.validateAnswer(answer, resultExpectedType=self.ohtTupleType)
-        self.assertTrue(text_fr == answer.results.TranslatedText, msg="Translate test wrong: " + answer.results.TranslatedText)
+        self.assertTrue(answer.results.TranslatedText)
 
 
 class Test_OHTRequestsProject(Test_Answers):
@@ -192,7 +190,7 @@ class Test_OHTRequestsProject(Test_Answers):
 
     def test_quote(self):
         uuid_list = self.get_file_resource()[:1][0]
-        answer = self.obj.quote(uuid_list, "en-us", "fr-fr", service="translation", expertise="marketing-consumer-media", proofreading="1", currency='EUR')
+        answer = self.obj.quote(uuid_list, "en-us", "fr-fr", service="translation", expertise="", proofreading="1", currency='EUR')
         self.validateAnswer(answer, resultExpectedType=self.ohtTupleType)
         self.assertTrue(answer.results.resources[0].resource == uuid_list[0])
         self.assertTrue(answer.results.resources[0].wordcount == holder.count_words)
@@ -210,7 +208,7 @@ class Test_OHTRequestsProject(Test_Answers):
             # sandbox create translation project for languages pair 'en-us' - 'fr-fr' (only one supported)
             # also need pass not empty expertise
             name = "unittest translate_project " + datetime.datetime.now().strftime(self.time_format())
-            answer = self.obj.create_translation_project("en-us", "fr-fr", uuid_list, name=name, expertise="marketing-consumer-media")
+            answer = self.obj.create_translation_project("en-us", "fr-fr", uuid_list, name=name, expertise="")
             self.validateAnswer(answer, resultExpectedType=self.ohtTupleType)
             holder.translation_project_id = answer.results.project_id
             project_id = holder.translation_project_id
@@ -225,7 +223,7 @@ class Test_OHTRequestsProject(Test_Answers):
         project_id = self.get_translation_project_id()
         answer = self.obj.project_detail(project_id)
         self.validateAnswer(answer, resultExpectedType=self.ohtTupleType)
-        self.assertTrue(answer.results.project_id == str(project_id))
+        self.assertTrue(answer.results.project_id == project_id)
         holder.translations = answer.results.resources.translations
 
     def test_wait_cancel_project(self):
@@ -250,15 +248,6 @@ class Test_OHTRequestsProject(Test_Answers):
         answer = self.obj.project_ratings(project_id)
         self.validateAnswer(answer)
 
-    def test_post_project_ratings(self):
-        """ Only check answer structure - under sandbox this method
-            always return 'forbidden - you are not allowed to perform this request' (code=102)
-        """
-        project_id = self.get_translation_project_id()
-        answer = self.obj.post_project_ratings(project_id, "Customer", 1, remarks="remarks")
-        self.validateAnswer(answer)
-        self.assertTrue(self.checkAnswerStructure(answer), msg="answer = " + str(answer))
-
     def test_create_proof_reading_project(self):
         """ there is no expertise parameter in docs, but under sandbox it's required """
         uuid_list = self.get_file_resource()[:1][0]
@@ -281,7 +270,7 @@ class Test_OHTRequestsProject(Test_Answers):
         self.assertTrue(translations_uuid_list, msg="No translations uuid yet")
         self.assertTrue(type(translations_uuid_list) == type([]))
         self.assertTrue(len(translations_uuid_list) > 0)
-        answer = self.obj.create_proof_translated_project(language_source, language_target, source_uuid_list, translations_uuid_list, expertise="marketing-consumer-media", name=name)
+        answer = self.obj.create_proof_translated_project(language_source, language_target, source_uuid_list, translations_uuid_list, expertise="", name=name)
         self.validateAnswer(answer, resultExpectedType=self.ohtTupleType)
         self.assertTrue(answer.results.project_id != 0)
 
