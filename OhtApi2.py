@@ -43,8 +43,8 @@ class OhtApi:
         self.__privateKey = private_key
         self.__sandbox = sandbox
 
-        self.__baseUrl = "http://www.onehourtranslation.com/api/2"
-        self.__sandboxUrl = "http://sandbox.onehourtranslation.com/api/2"
+        self.__baseUrl = "https://www.onehourtranslation.com/api/2"
+        self.__sandboxUrl = "https://sandbox.onehourtranslation.com/api/2"
 
         self._renew_work_url()
 
